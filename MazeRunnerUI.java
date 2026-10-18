@@ -42,8 +42,10 @@ public class MazeRunnerUI {
     private final JLabel scoreLabel;
     private final Timer countdownTimer;
     private JButton startGameButton;
+    private JButton freePlayButton;
     private int secondsRemaining = 60;
     private int completedMazes;
+    private boolean freePlayMode;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new MazeRunnerUI(new MazeRunner()).show());
@@ -51,7 +53,7 @@ public class MazeRunnerUI {
 
     public MazeRunnerUI(MazeRunner game) {
         this.game = game;
-        statusLabel = createLabel("Press Start Game to enter the labyrinth.", 14, TEXT);
+        statusLabel = createLabel("Choose a game mode to enter the labyrinth.", 14, TEXT);
         timerLabel = createLabel("01:00", 22, ACCENT);
         scoreLabel = createLabel("0", 22, TEXT);
         countdownTimer = new Timer(1000, event -> updateCountdown());
@@ -101,7 +103,7 @@ public class MazeRunnerUI {
         JPanel titleBlock = new JPanel(new GridLayout(2, 1, 0, 3));
         titleBlock.setOpaque(false);
         titleBlock.add(createLabel("MAZERUNNER", 27, TEXT, Font.SERIF));
-        titleBlock.add(createLabel("FIND THE EXIT BEFORE THE SAND RUNS OUT", 11, ACCENT));
+        titleBlock.add(createLabel("ESCAPE AS MANY LABYRINTHS AS YOU CAN", 11, ACCENT));
 
         JPanel scoreBlock = new JPanel(new GridLayout(2, 2, 12, 2));
         scoreBlock.setOpaque(false);
@@ -155,12 +157,16 @@ public class MazeRunnerUI {
         buttons.setOpaque(false);
         startGameButton = new JButton("Start Game");
         styleButton(startGameButton, true);
-        startGameButton.addActionListener(event -> startNewGame());
+        startGameButton.addActionListener(event -> startTimedGame());
+        freePlayButton = new JButton("Free Play");
+        styleButton(freePlayButton, false);
+        freePlayButton.addActionListener(event -> startFreePlay());
         JButton quit = new JButton("Quit");
         styleButton(quit, false);
         quit.setFocusable(false);
         quit.addActionListener(event -> closeWindow());
         buttons.add(startGameButton);
+        buttons.add(freePlayButton);
         buttons.add(quit);
         return buttons;
     }
@@ -187,16 +193,30 @@ public class MazeRunnerUI {
         return label;
     }
 
-    private void startNewGame() {
+    private void startTimedGame() {
+        startGame(false);
+    }
+
+    private void startFreePlay() {
+        startGame(true);
+    }
+
+    private void startGame(boolean freePlay) {
         countdownTimer.stop();
+        freePlayMode = freePlay;
         secondsRemaining = 60;
         completedMazes = 0;
         game.startNewGame();
-        startGameButton.setEnabled(false);
-        statusLabel.setText("The labyrinth is open. Find the exit.");
+        startGameButton.setEnabled(freePlay);
+        freePlayButton.setEnabled(!freePlay);
+        statusLabel.setText(freePlay
+                ? "Free Play is on. Find the exit at your own pace."
+                : "The labyrinth is open. Find the exit.");
         refreshScoreboard();
         mazeView.repaint();
-        countdownTimer.start();
+        if (!freePlay) {
+            countdownTimer.start();
+        }
     }
 
     private void updateCountdown() {
@@ -208,12 +228,15 @@ public class MazeRunnerUI {
             game.finishGame();
             statusLabel.setText("Time is up. You completed " + completedMazes + " mazes.");
             startGameButton.setEnabled(true);
+            freePlayButton.setEnabled(true);
             mazeView.repaint();
         }
     }
 
     private void refreshScoreboard() {
-        timerLabel.setText(String.format("%02d:%02d", secondsRemaining / 60, secondsRemaining % 60));
+        timerLabel.setText(freePlayMode
+                ? "FREE"
+                : String.format("%02d:%02d", secondsRemaining / 60, secondsRemaining % 60));
         scoreLabel.setText(Integer.toString(completedMazes));
     }
 
